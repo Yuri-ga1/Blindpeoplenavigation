@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.TextureView
+import android.widget.ImageView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
@@ -11,6 +12,8 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
 class MainActivity : AppCompatActivity() {
+
+    private lateinit var imageView: ImageView
 
     private lateinit var textureView: TextureView
     private lateinit var cameraManager: CameraManager
@@ -20,8 +23,10 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
 
+        imageView = findViewById(R.id.imageView)
+
         textureView = findViewById(R.id.textureView)
-        cameraManager = CameraManager(this, textureView)
+        cameraManager = CameraManager(this, textureView, imageView)
 
         if (!hasRequiredPermissions()) {
             ActivityCompat.requestPermissions(
