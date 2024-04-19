@@ -5,7 +5,6 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.TextureView
 import android.widget.ImageView
-import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -35,13 +34,11 @@ class MainActivity : AppCompatActivity() {
         } else {
             cameraManager.initialize()
         }
-        Toast.makeText(this, "create", Toast.LENGTH_LONG).show()
     }
 
     override fun onResume() {
         super.onResume()
         if (hasRequiredPermissions()) {
-            Toast.makeText(this, "message", Toast.LENGTH_LONG).show()
             val savedInstanceState = Bundle()
             onRestoreInstanceState(savedInstanceState)
         } else {
@@ -68,6 +65,10 @@ class MainActivity : AppCompatActivity() {
         cameraManager.restoreCameraState(savedInstanceState)
     }
     private fun hasRequiredPermissions(): Boolean{
+        /*
+        Функция проверки.
+        Возвращает true, если мы получили все разрешения.
+         */
         return CAMERA_PERMITION.all{
             ContextCompat.checkSelfPermission(
                 applicationContext,
@@ -81,6 +82,10 @@ class MainActivity : AppCompatActivity() {
         permissions: Array<out String>,
         grantResults: IntArray
     ) {
+        /*
+        Автоматическая функция.
+        Срабатывает, поле того, как пользователь выбрал как использовать разрешения.
+         */
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == CAMERA_PERMISSION_REQUEST_CODE) {
             if (hasRequiredPermissions()) {

@@ -15,20 +15,15 @@ import android.hardware.camera2.CameraManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
-import android.util.Log
 import android.view.Surface
 import android.view.TextureView
 import android.widget.ImageView
 import android.widget.Toast
 import com.example.blindpeoplenavigation.ml.Yolo
-import org.tensorflow.lite.DataType
 import org.tensorflow.lite.support.common.FileUtil
 import org.tensorflow.lite.support.image.ImageProcessor
 import org.tensorflow.lite.support.image.TensorImage
 import org.tensorflow.lite.support.image.ops.ResizeOp
-import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
-import java.io.ByteArrayOutputStream
-import java.nio.ByteBuffer
 
 class CameraManager(private val context: Context,
                     private val textureView: TextureView,
@@ -82,48 +77,63 @@ class CameraManager(private val context: Context,
                 var image = TensorImage.fromBitmap(bitmap)
                 image = imageProcessor.process(image)
 
-                val outputs = model.process(image)
-                val locations = outputs.locationsAsTensorBuffer.floatArray
-                val classes = outputs.classesAsTensorBuffer.floatArray
-                val scores = outputs.scoresAsTensorBuffer.floatArray
-                val numberOfDetections = outputs.numberOfDetectionsAsTensorBuffer.floatArray
-
-                var mutable = bitmap.copy(Bitmap.Config.ARGB_8888, true)
-                val canvas = Canvas(mutable)
-
-                val h = mutable.height
-                val w = mutable.width
-
-                paint.textSize=h/15f
-                paint.strokeWidth = h/85f
-
-                var x: Int
-                scores.forEachIndexed{ index, fl ->
-                    x = index * 4
-                    if (fl >0.5){
-                        paint.setColor(colors.get(index))
-                        paint.style = Paint.Style.STROKE
-                        canvas.drawRect(RectF(
-                            locations.get(x+1)*w,
-                            locations.get(x)*h,
-                            locations.get(x+3)*w,
-                            locations.get(x+2)*h), paint)
-                        paint.style = Paint.Style.FILL
-                        canvas.drawText(
-                            labels.get(classes.get(index).toInt())+" "+fl.toString(),
-                            locations.get(x+1)*w,
-                            locations.get(x)*h,
-                            paint)
-                    }
-                }
-
-                imageView.setImageBitmap(mutable)
-
+                drawTriangleWithLabel(bitmap, image)
             }
         }
     }
 
+    private fun drawTriangleWithLabel(bitmap: Bitmap, image: TensorImage){
+        /*
+            Получает на вход bitmap и image.
+            Обводит треугольниками объекты определенные нейронкой и подписывает их.
+            Названия классов объектов находятся в переменной labels
+        */
+        val outputs = model.process(image)
+        val locations = outputs.locationsAsTensorBuffer.floatArray
+        val classes = outputs.classesAsTensorBuffer.floatArray
+        val scores = outputs.scoresAsTensorBuffer.floatArray
+//                val numberOfDetections = outputs.numberOfDetectionsAsTensorBuffer.floatArray
+
+        var mutable = bitmap.copy(Bitmap.Config.ARGB_8888, true)
+        val canvas = Canvas(mutable)
+
+        val h = mutable.height
+        val w = mutable.width
+
+        paint.textSize=h/20f
+        paint.strokeWidth = h/100f
+
+        // Для каждого опознаного объекта рисуем прямоугольник и подписываем его
+        var x: Int
+        scores.forEachIndexed{ index, fl ->
+            x = index * 4
+            // Если fl - уверенность
+            if (fl >0.5){
+                paint.setColor(colors.get(index))
+                paint.style = Paint.Style.STROKE
+                canvas.drawRect(RectF(
+                    locations.get(x+1)*w,
+                    locations.get(x)*h,
+                    locations.get(x+3)*w,
+                    locations.get(x+2)*h), paint
+                )
+                paint.style = Paint.Style.FILL
+                canvas.drawText(
+                    labels.get(classes.get(index).toInt()),
+                    locations.get(x+1)*w,
+                    locations.get(x)*h,
+                    paint
+                )
+            }
+        }
+
+        imageView.setImageBitmap(mutable)
+    }
+
     fun closeCamera() {
+        /*
+        Функция закрытия камеры
+         */
         if (::cameraDevice.isInitialized) {
             cameraDevice.close()
             model.close()
@@ -132,6 +142,10 @@ class CameraManager(private val context: Context,
 
     @SuppressLint("MissingPermission")
     private fun openCamera(cameraId: String) {
+        /*
+        Функция открытия камеры.
+        Получиет во внутрь Айди камеры которую используем
+         */
         cameraManager.openCamera(cameraId, object : CameraDevice.StateCallback() {
             override fun onOpened(camera: CameraDevice) {
                 cameraDevice = camera
@@ -148,7 +162,7 @@ class CameraManager(private val context: Context,
                     }
 
                     override fun onConfigureFailed(session: CameraCaptureSession) {}
-                    }, handler)
+                }, handler)
             }
 
             override fun onDisconnected(camera: CameraDevice) {}
@@ -173,6 +187,10 @@ class CameraManager(private val context: Context,
     }
 
     private fun getCameraId(): String? {
+        /*
+        Получаем Айди основной камеры и возвращаем его.
+        В Случае, если не найдена, выдаем null.
+         */
         val cameraIds = cameraManager.cameraIdList
         for (cameraId in cameraIds) {
             val characteristics = cameraManager.getCameraCharacteristics(cameraId)
