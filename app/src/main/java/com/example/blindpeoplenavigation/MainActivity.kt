@@ -1,107 +1,115 @@
 package com.example.blindpeoplenavigation
 
 import android.Manifest
-import android.content.pm.PackageManager
 import android.os.Bundle
-import android.view.TextureView
-import android.widget.ImageView
+import android.util.Log
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.Preview
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.lifecycleScope
+import com.example.blindpeoplenavigation.databinding.ActivityMainBinding
+import com.example.blindpeoplenavigation.ml.Yolo
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.launch
+import org.tensorflow.lite.support.common.FileUtil
+import org.tensorflow.lite.support.image.ImageProcessor
+import org.tensorflow.lite.support.image.ops.ResizeOp
+import java.util.concurrent.Executors
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var imageView: ImageView
+    private val activityResultLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { permissionGranted ->
+        if (permissionGranted) {
+            startCamera()
+        }
+    }
 
-    private lateinit var textureView: TextureView
-    private lateinit var cameraManager: CameraManager
+    private lateinit var imageAnalysis: ImageAnalysis
+
+    private lateinit var model: Yolo
+    private lateinit var imageProcessor: ImageProcessor
+    private lateinit var labels: List<String>
+
+    private lateinit var bindding: ActivityMainBinding
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContentView(R.layout.activity_main)
 
-        imageView = findViewById(R.id.imageView)
+        bindding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(bindding.root)
 
-        textureView = findViewById(R.id.textureView)
-        cameraManager = CameraManager(this, textureView, imageView)
+        model = Yolo.newInstance(this)
 
-        if (!hasRequiredPermissions()) {
-            ActivityCompat.requestPermissions(
-                this, CAMERA_PERMITION, CAMERA_PERMISSION_REQUEST_CODE
+        //ресайз картинки в нужный формат для нейронки
+        imageProcessor = ImageProcessor.Builder().add(
+            ResizeOp(
+                300,
+                300,
+                ResizeOp.ResizeMethod.BILINEAR
             )
-        } else {
-            cameraManager.initialize()
+        ).build()
+
+        labels = FileUtil.loadLabels(this, "label.txt")
+
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            insets
         }
-    }
 
-    override fun onResume() {
-        super.onResume()
-        if (hasRequiredPermissions()) {
-            val savedInstanceState = Bundle()
-            onRestoreInstanceState(savedInstanceState)
-        } else {
-            ActivityCompat.requestPermissions(
-                this, CAMERA_PERMITION, CAMERA_PERMISSION_REQUEST_CODE
-            )
-        }
-    }
-
-    override fun onPause() {
-        super.onPause()
-        val outState = Bundle()
-        onSaveInstanceState(outState)
-        cameraManager.closeCamera()
-    }
-
-    override fun onSaveInstanceState(outState: Bundle) {
-        super.onSaveInstanceState(outState)
-        cameraManager.saveCameraState(outState)
-    }
-
-    override fun onRestoreInstanceState(savedInstanceState: Bundle) {
-        super.onRestoreInstanceState(savedInstanceState)
-        cameraManager.restoreCameraState(savedInstanceState)
-    }
-    private fun hasRequiredPermissions(): Boolean{
-        /*
-        Функция проверки.
-        Возвращает true, если мы получили все разрешения.
-         */
-        return CAMERA_PERMITION.all{
-            ContextCompat.checkSelfPermission(
-                applicationContext,
-                it
-            ) == PackageManager.PERMISSION_GRANTED
-        }
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        /*
-        Автоматическая функция.
-        Срабатывает, поле того, как пользователь выбрал как использовать разрешения.
-         */
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == CAMERA_PERMISSION_REQUEST_CODE) {
-            if (hasRequiredPermissions()) {
-                cameraManager.initialize()
-            } else {
-                ActivityCompat.requestPermissions(
-                    this, CAMERA_PERMITION, CAMERA_PERMISSION_REQUEST_CODE
+        imageAnalysis = ImageAnalysis.Builder().build().apply {
+            setAnalyzer(
+                Executors.newSingleThreadExecutor(),
+                ImageAnalyze(
+                    model = model,
+                    imageProcessor = imageProcessor,
+                    labels = labels,
+                    onResult = {
+                        Log.d("Objects", it.size.toString())
+//                        runOnUiThread() -> отображение на экране
+                    }
                 )
-            }
+            )
+        }
+
+        activityResultLauncher.launch(Manifest.permission.CAMERA)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        closeCamera()
+    }
+
+    private fun startCamera() {
+        val center = CameraRecognitionCenter(applicationContext)
+        center.setupCamera(this)
+        lifecycleScope.launch {
+            center.cameraProvider
+                .filterNotNull()
+                .collectLatest {
+                    val preview = Preview.Builder().build()
+                    it.bindToLifecycle(
+                        this@MainActivity,
+                        CameraSelector.DEFAULT_BACK_CAMERA,
+                        preview, imageAnalysis
+                    )
+
+                    preview.setSurfaceProvider(bindding.viewFinder.surfaceProvider)
+                }
         }
     }
 
-    companion object{
-        private  val CAMERA_PERMITION = arrayOf(
-            Manifest.permission.CAMERA,
-        )
-        private const val CAMERA_PERMISSION_REQUEST_CODE = 101
+    private fun closeCamera() {
+        model.close()
     }
 }
