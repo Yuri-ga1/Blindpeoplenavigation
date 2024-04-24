@@ -1,4 +1,4 @@
-package com.example.blindpeoplenavigation
+package com.example.blindpeoplenavigation.camera
 
 import androidx.camera.lifecycle.ProcessCameraProvider
 import kotlinx.coroutines.flow.StateFlow

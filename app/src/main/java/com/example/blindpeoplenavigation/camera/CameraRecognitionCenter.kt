@@ -1,4 +1,4 @@
-package com.example.blindpeoplenavigation
+package com.example.blindpeoplenavigation.camera
 
 import android.content.Context
 import androidx.camera.lifecycle.ProcessCameraProvider

@@ -12,7 +12,9 @@ import androidx.camera.core.Preview
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
+import com.example.blindpeoplenavigation.camera.CameraRecognitionCenter
 import com.example.blindpeoplenavigation.databinding.ActivityMainBinding
+import com.example.blindpeoplenavigation.imageanalyzer.ImageAnalyzer
 import com.example.blindpeoplenavigation.ml.Yolo
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.filterNotNull
@@ -70,12 +72,14 @@ class MainActivity : AppCompatActivity() {
         imageAnalysis = ImageAnalysis.Builder().build().apply {
             setAnalyzer(
                 Executors.newSingleThreadExecutor(),
-                ImageAnalyze(
+                ImageAnalyzer(
                     model = model,
                     imageProcessor = imageProcessor,
                     labels = labels,
                     onResult = {
-                        Log.d("Objects", it.size.toString())
+                        it.forEach {
+                            Log.d("Objects", it.objectClass)
+                        }
 //                        runOnUiThread() -> отображение на экране
                     }
                 )

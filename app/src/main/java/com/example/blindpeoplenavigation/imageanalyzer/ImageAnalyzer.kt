@@ -1,4 +1,4 @@
-package com.example.blindpeoplenavigation
+package com.example.blindpeoplenavigation.imageanalyzer
 
 import android.graphics.Bitmap
 import androidx.camera.core.ImageAnalysis
@@ -7,7 +7,7 @@ import com.example.blindpeoplenavigation.ml.Yolo
 import org.tensorflow.lite.support.image.ImageProcessor
 import org.tensorflow.lite.support.image.TensorImage
 
-class ImageAnalyze(
+class ImageAnalyzer(
     private val model: Yolo,
     private val imageProcessor: ImageProcessor,
     private val labels: List<String>,
@@ -55,6 +55,7 @@ class ImageAnalyze(
                 locations.get(x+3)*w,
                 locations.get(x+2)*h
             )
+
             val detectedObject = DetectedObject(
                 objectLocation,
                 labels.get(classes.get(index).toInt()),
@@ -65,7 +66,4 @@ class ImageAnalyze(
 
         return detectedObjects
     }
-
-    data class DetectedObject(val locations: ObjectLocation, val objectClass: String, val scores: Float)
-    data class ObjectLocation(val left: Float, val top: Float, val right: Float, val bottom: Float)
 }
