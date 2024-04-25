@@ -16,7 +16,6 @@ import androidx.lifecycle.lifecycleScope
 import com.example.blindpeoplenavigation.camera.CameraRecognitionCenter
 import com.example.blindpeoplenavigation.databinding.ActivityMainBinding
 import com.example.blindpeoplenavigation.imageanalyzer.ImageAnalyzer
-import com.example.blindpeoplenavigation.imageanalyzer.ObjectLocation
 import com.example.blindpeoplenavigation.ml.Yolo
 import com.example.blindpeoplenavigation.texttospeech.TextToSpeechModule
 import kotlinx.coroutines.flow.collectLatest
@@ -89,11 +88,16 @@ class MainActivity : AppCompatActivity() {
                     model = model,
                     imageProcessor = imageProcessor,
                     labels = labels,
+                    cameraCenter = cameraCenter,
                     onResult = {
                         it.forEach {
-//                            Log.e("message", it.objectClass)
-                            val objectLocation: ObjectLocation = it.location
-                            val text = positionToCenter(objectLocation, it.objectClass)
+                            Log.e("message", "${it.count} ${it.objectName} ${it.position}")
+                            var text = "${it.objectName} is on ${it.position}"
+
+                            if (it.count > 1){
+                                text = "${it.count} ${text}"
+                            }
+
                             textToSpeechModule.speakOut(text)
                         }
 //                        runOnUiThread() -> отображение на экране
@@ -103,31 +107,6 @@ class MainActivity : AppCompatActivity() {
         }
 
         activityResultLauncher.launch(Manifest.permission.CAMERA)
-    }
-
-    private fun positionToCenter(
-        position: ObjectLocation,
-        objectName: String
-    ): String {
-        val text = "Object $objectName is on "
-
-        return when {
-            position.top <= cameraCenter.y && position.bottom >= cameraCenter.y &&
-                    position.left <= cameraCenter.x && position.right >= cameraCenter.x ->
-                "$text center"
-            position.top > cameraCenter.y && position.left < cameraCenter.x ->
-                "$text top left"
-            position.top > cameraCenter.y && position.right > cameraCenter.x ->
-                "$text top right"
-            position.bottom < cameraCenter.y && position.left < cameraCenter.x ->
-                "$text bottom left"
-            position.bottom < cameraCenter.y && position.right > cameraCenter.x ->
-                "$text bottom right"
-            position.top > cameraCenter.y -> "$text top"
-            position.bottom < cameraCenter.y -> "$text bottom"
-            position.left < cameraCenter.x -> "$text left"
-            else -> "$text right"
-        }
     }
 
     override fun onResume() {
@@ -166,8 +145,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun getCameraCenter(): Point{
-        val x = cameraZone.width/2
-        val y = cameraZone.height/2
+        val x: Int = cameraZone.width/2
+        val y: Int = cameraZone.height/2
         return Point(x, y)
     }
 
