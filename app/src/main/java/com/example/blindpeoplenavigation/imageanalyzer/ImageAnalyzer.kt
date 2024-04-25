@@ -15,7 +15,7 @@ class ImageAnalyzer(
     private val imageProcessor: ImageProcessor,
     private val labels: List<String>,
     private val cameraCenter: Point,
-    private val onResult: (List<TextToSpeechInfo>) -> Unit
+    private val onResult: (List<DetectedItems>) -> Unit
 ): ImageAnalysis.Analyzer{
 
     override fun analyze(image: ImageProxy) {
@@ -29,14 +29,14 @@ class ImageAnalyzer(
         // Обработка результатов
         val detectedObjects = processOutputs(outputs, bitmap)
 
-        var result = mutableListOf<TextToSpeechInfo>()
+        var result = mutableListOf<DetectedItems>()
 
         detectedObjects.forEach {
             val pos: statePosition = positionToCenter(it.location)
             val objName: String = it.objectClass
 
             if (result.none { objName !in it.objectName}){
-                val info = TextToSpeechInfo(
+                val info = DetectedItems(
                     count = 1,
                     objectName = objName,
                     position = pos
@@ -47,7 +47,7 @@ class ImageAnalyzer(
                 if(existingInfo != null) {
                     existingInfo.count++
                 } else{
-                    val info = TextToSpeechInfo(
+                    val info = DetectedItems(
                         count = 1,
                         objectName = objName,
                         position = pos
