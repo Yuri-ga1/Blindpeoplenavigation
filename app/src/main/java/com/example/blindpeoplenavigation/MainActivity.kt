@@ -15,6 +15,8 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.blindpeoplenavigation.camera.CameraRecognitionCenter
 import com.example.blindpeoplenavigation.databinding.ActivityMainBinding
+import com.example.blindpeoplenavigation.imageanalyzer.DetectedItems
+import com.example.blindpeoplenavigation.imageanalyzer.DetectedObject
 import com.example.blindpeoplenavigation.imageanalyzer.ImageAnalyzer
 import com.example.blindpeoplenavigation.ml.Yolo
 import com.example.blindpeoplenavigation.texttospeech.TextToSpeechModule
@@ -81,6 +83,8 @@ class MainActivity : AppCompatActivity() {
             insets
         }
 
+        var objectsInCamera= mutableListOf<DetectedItems>()
+
         imageAnalysis = ImageAnalysis.Builder().build().apply {
             setAnalyzer(
                 Executors.newSingleThreadExecutor(),
@@ -90,15 +94,49 @@ class MainActivity : AppCompatActivity() {
                     labels = labels,
                     cameraCenter = cameraCenter,
                     onResult = {
+                        /*
+                            Обрабатываем каждый обнаруженный объект. Проверяем, был ли он у нас уже обнаружен на той же позиции.
+                            Если был обнаружен смотрим не изменилось ли количество объектов.
+                            Если его он не был обнаружен или если изменилось их количество, сохраняем это в objectsInCamera
+                         */
                         it.forEach {
-                            Log.e("message", "${it.count} ${it.objectName} ${it.position}")
-                            var text = "${it.objectName} is on ${it.position}"
+                            val objName = it.objectName
+                            val pos = it.position
+                            val existingInfo = objectsInCamera.find { it.objectName == objName && it.position == pos }
+
+                            var text = "${objName} is on ${pos}"
+
+//                            Log.e("message", "${it.count} ${objName} ${pos}")
+                            if (existingInfo == null){
+                                objectsInCamera.add(it)
+                            } else{
+                                if (it.count != existingInfo.count){
+                                    existingInfo.count = it.count
+                                    text = if (it.count > 1) "${it.count} ${text}" else text
+                                } else{
+                                    return@forEach
+                                }
+                            }
 
                             if (it.count > 1){
                                 text = "${it.count} ${text}"
                             }
 
                             textToSpeechModule.speakOut(text)
+                        }
+
+                        /*
+                            Очищаем objectsInCamera. Если какой-то объект, что есть в массиве отсутсвует на
+                            кадре, то удаляем его.
+                         */
+                        val onResult = it
+                        objectsInCamera.forEachIndexed { index, detectedItems ->
+                            val objName = detectedItems.objectName
+                            val pos = detectedItems.position
+                            val existingInfo = onResult.find { it.objectName == objName && it.position == pos }
+
+                            if (existingInfo == null)
+                                objectsInCamera.removeAt(index)
                         }
 //                        runOnUiThread() -> отображение на экране
                     }
