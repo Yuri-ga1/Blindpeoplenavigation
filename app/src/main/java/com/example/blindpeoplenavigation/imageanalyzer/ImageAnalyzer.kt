@@ -47,6 +47,9 @@ class ImageAnalyzer(
         var x: Int
         val detectedObjects = mutableListOf<DetectedObject>()
         scores.forEachIndexed { index, fl ->
+            if (fl < 0.5)
+                return@forEachIndexed
+
             x = index * 4
 
             val objectLocation = ObjectLocation(
