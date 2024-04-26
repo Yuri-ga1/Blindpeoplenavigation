@@ -105,14 +105,6 @@ class ImageAnalyzer(
             position.top <= cameraCenter.y && position.bottom >= cameraCenter.y &&
                     position.left <= cameraCenter.x && position.right >= cameraCenter.x ->
                 statePosition.CENTER
-            position.bottom > cameraCenter.y && position.right < cameraCenter.x ->
-                statePosition.TOP_LEFT
-            position.bottom > cameraCenter.y && position.left > cameraCenter.x ->
-                statePosition.TOP_RIGHT
-            position.top < cameraCenter.y && position.right < cameraCenter.x ->
-                statePosition.BOTTOM_LEFT
-            position.top < cameraCenter.y && position.left > cameraCenter.x ->
-                statePosition.BOTTOM_RIGHT
             position.bottom > cameraCenter.y -> statePosition.TOP
             position.top < cameraCenter.y -> statePosition.BOTTOM
             position.right < cameraCenter.x -> statePosition.LEFT
