@@ -130,14 +130,14 @@ class MainActivity : AppCompatActivity() {
                             кадре, то удаляем его.
                          */
                         val onResult = it
-                        objectsInCamera.forEachIndexed { index, detectedItems ->
-                            val objName = detectedItems.objectName
-                            val pos = detectedItems.position
-                            val existingInfo = onResult.find { it.objectName == objName && it.position == pos }
-
-                            if (existingInfo == null)
-                                objectsInCamera.removeAt(index)
+                        val filteredObjectsInCamera = objectsInCamera.filter { existingInfo ->
+                            val objName = existingInfo.objectName
+                            val pos = existingInfo.position
+                            onResult.any { it.objectName == objName && it.position == pos }
                         }
+
+                        objectsInCamera.clear()
+                        objectsInCamera.addAll(filteredObjectsInCamera)
 //                        runOnUiThread() -> отображение на экране
                     }
                 )
