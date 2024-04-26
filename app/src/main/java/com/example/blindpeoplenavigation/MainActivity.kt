@@ -112,7 +112,12 @@ class MainActivity : AppCompatActivity() {
                             cameraCenter
                         )
                         val result = imageAnalyzer.analyze(image)
-                        voice(result)
+
+                        result.forEach {
+                            val text = "${it.count} ${it.objectName} is on ${it.position}"
+                            textToSpeechModule.speakOut(text)
+                        }
+
                         image.close()
                     }
 
@@ -121,14 +126,6 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             )
-        }
-    }
-
-    private fun voice(result: MutableList<DetectedItems>) {
-        result.forEach {
-            val text = "${it.count} ${it.objectName} is on ${it.position}"
-//            Log.e("message", text)
-            textToSpeechModule.speakOut(text)
         }
     }
 
