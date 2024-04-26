@@ -46,39 +46,45 @@ class MainActivity : AppCompatActivity() {
     //озвучивание текста
     private lateinit var textToSpeechModule: TextToSpeechModule
 
+    //камера
     private lateinit var imageCapture: ImageCapture
     private lateinit var cameraExecutor: ExecutorService
+    private lateinit var cameraZone: PreviewView
+    private lateinit var cameraCenter: Point
 
-    //модель
+    //tensorflow модель
     private lateinit var model: Yolo
     private lateinit var imageProcessor: ImageProcessor
     private lateinit var labels: List<String>
 
+    //view
     private lateinit var takePhotoBtn: ImageButton
     private lateinit var bindding: ActivityMainBinding
-    private lateinit var cameraZone: PreviewView
-    private lateinit var cameraCenter: Point
+
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            insets
+        }
 
         bindding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(bindding.root)
 
         cameraZone = bindding.viewFinder
         cameraExecutor = Executors.newSingleThreadExecutor()
+        cameraCenter = getCameraCenter()
 
         takePhotoBtn = findViewById(R.id.takePhotoBtn)
         takePhotoBtn.setOnClickListener{
             takeFrame()
         }
 
-        cameraCenter = getCameraCenter()
-
         model = Yolo.newInstance(this)
-
         //ресайз картинки в нужный формат для нейронки
         imageProcessor = ImageProcessor.Builder().add(
             ResizeOp(
@@ -87,46 +93,9 @@ class MainActivity : AppCompatActivity() {
                 ResizeOp.ResizeMethod.BILINEAR
             )
         ).build()
-
         labels = FileUtil.loadLabels(this, "label.txt")
 
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
-
         activityResultLauncher.launch(Manifest.permission.CAMERA)
-    }
-
-    private fun takeFrame() {
-        cameraExecutor.execute {
-            imageCapture.takePicture(
-                ContextCompat.getMainExecutor(this),
-                object : ImageCapture.OnImageCapturedCallback() {
-                    override fun onCaptureSuccess(image: ImageProxy) {
-                        val imageAnalyzer = ImageAnalyzer(
-                            model,
-                            imageProcessor,
-                            labels,
-                            cameraCenter
-                        )
-                        val result = imageAnalyzer.analyze(image)
-
-                        result.forEach {
-                            val text = "${it.count} ${it.objectName} is on ${it.position}"
-                            textToSpeechModule.speakOut(text)
-                        }
-
-                        image.close()
-                    }
-
-                    override fun onError(exception: ImageCaptureException) {
-                        Log.e("TAG", "Photo capture failed: ${exception.message}")
-                    }
-                }
-            )
-        }
     }
 
     override fun onResume() {
@@ -167,6 +136,38 @@ class MainActivity : AppCompatActivity() {
                 }
         }
     }
+
+
+    private fun takeFrame() {
+        cameraExecutor.execute {
+            imageCapture.takePicture(
+                ContextCompat.getMainExecutor(this),
+                object : ImageCapture.OnImageCapturedCallback() {
+                    override fun onCaptureSuccess(image: ImageProxy) {
+                        val imageAnalyzer = ImageAnalyzer(
+                            model,
+                            imageProcessor,
+                            labels,
+                            cameraCenter
+                        )
+                        val result = imageAnalyzer.analyze(image)
+
+                        result.forEach {
+                            val text = "${it.count} ${it.objectName} is on ${it.position}"
+                            textToSpeechModule.speakOut(text)
+                        }
+
+                        image.close()
+                    }
+
+                    override fun onError(exception: ImageCaptureException) {
+                        Log.e("TAG", "Photo capture failed: ${exception.message}")
+                    }
+                }
+            )
+        }
+    }
+
 
     private fun getCameraCenter(): Point{
         val x: Int = cameraZone.width/2
