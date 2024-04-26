@@ -1,7 +1,6 @@
 package com.example.blindpeoplenavigation.imageanalyzer
 
 import android.graphics.Bitmap
-import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import com.example.blindpeoplenavigation.Point
 import com.example.blindpeoplenavigation.imageanalyzer.EnumStateLocation
@@ -14,11 +13,10 @@ class ImageAnalyzer(
     private val model: Yolo,
     private val imageProcessor: ImageProcessor,
     private val labels: List<String>,
-    private val cameraCenter: Point,
-    private val onResult: (List<DetectedItems>) -> Unit
-): ImageAnalysis.Analyzer{
+    private val cameraCenter: Point
+){
 
-    override fun analyze(image: ImageProxy) {
+     fun analyze(image: ImageProxy): MutableList<DetectedItems> {
         val bitmap: Bitmap = image.toBitmap()
 
         var tensorImage = TensorImage.fromBitmap(bitmap)
@@ -57,10 +55,7 @@ class ImageAnalyzer(
             }
         }
 
-        // Передача результатов через callback
-        onResult(result)
-
-        image.close()
+        return result
     }
 
     private fun processOutputs(outputs: Yolo.Outputs, bitmap: Bitmap): List<DetectedObject> {
