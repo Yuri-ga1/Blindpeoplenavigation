@@ -19,7 +19,6 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.blindpeoplenavigation.camera.CameraRecognitionCenter
 import com.example.blindpeoplenavigation.databinding.ActivityMainBinding
-import com.example.blindpeoplenavigation.imageanalyzer.DetectedItems
 import com.example.blindpeoplenavigation.imageanalyzer.ImageAnalyzer
 import com.example.blindpeoplenavigation.ml.Yolo
 import com.example.blindpeoplenavigation.texttospeech.TextToSpeechModule
@@ -66,14 +65,15 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        bindding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(bindding.root)
+
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
-
-        bindding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(bindding.root)
 
         cameraZone = bindding.viewFinder
         cameraExecutor = Executors.newSingleThreadExecutor()
@@ -110,6 +110,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         model.close()
+        cameraExecutor.shutdown()
         super.onDestroy()
     }
 
