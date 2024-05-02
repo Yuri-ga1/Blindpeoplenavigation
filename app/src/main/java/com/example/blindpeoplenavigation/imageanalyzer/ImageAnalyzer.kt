@@ -33,25 +33,16 @@ class ImageAnalyzer(
             val pos: statePosition = positionToCenter(it.location)
             val objName: String = it.objectClass
 
-            if (result.none { objName !in it.objectName}){
+            val existingInfo = result.find { it.objectName == objName && it.position == pos }
+            if(existingInfo != null) {
+                existingInfo.count++
+            } else{
                 val info = DetectedItems(
                     count = 1,
                     objectName = objName,
                     position = pos
                 )
                 result.add(info)
-            } else{
-                val existingInfo = result.find { it.objectName == objName && it.position == pos }
-                if(existingInfo != null) {
-                    existingInfo.count++
-                } else{
-                    val info = DetectedItems(
-                        count = 1,
-                        objectName = objName,
-                        position = pos
-                    )
-                    result.add(info)
-                }
             }
         }
 
@@ -105,10 +96,10 @@ class ImageAnalyzer(
             position.top <= cameraCenter.y && position.bottom >= cameraCenter.y &&
                     position.left <= cameraCenter.x && position.right >= cameraCenter.x ->
                 statePosition.CENTER
-            position.bottom > cameraCenter.y -> statePosition.TOP
-            position.top < cameraCenter.y -> statePosition.BOTTOM
             position.right < cameraCenter.x -> statePosition.LEFT
-            else -> statePosition.RIGHT
+            position.left > cameraCenter.x -> statePosition.RIGHT
+            position.bottom > cameraCenter.y -> statePosition.TOP
+            else -> statePosition.BOTTOM
         }
     }
 }

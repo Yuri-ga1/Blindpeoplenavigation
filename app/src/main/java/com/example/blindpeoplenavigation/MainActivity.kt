@@ -77,7 +77,6 @@ class MainActivity : AppCompatActivity() {
 
         cameraZone = bindding.viewFinder
         cameraExecutor = Executors.newSingleThreadExecutor()
-        cameraCenter = getCameraCenter()
 
         takePhotoBtn = findViewById(R.id.takePhotoBtn)
         takePhotoBtn.setOnClickListener{
@@ -136,6 +135,7 @@ class MainActivity : AppCompatActivity() {
                     preview.setSurfaceProvider(cameraZone.surfaceProvider)
                 }
         }
+        cameraCenter = getCameraCenter()
     }
 
 
